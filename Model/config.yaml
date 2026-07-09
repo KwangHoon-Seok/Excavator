@@ -1,0 +1,58 @@
+# GCRL 학습 설정 (Model/train.py가 읽음)
+# task: bucket_tip을 자유공간 waypoint로 보내는 reaching.
+run_name: waypoint
+reward: reward_decomposed  # sparse / sparse_dense / reward_decomposed(sparse+swing방위+reach평면, 3항 [0,1])
+random_start: false      # 매 reset 관절 랜덤 시작자세 → 상대방위 균일+stitching으로 후면 도달 학습
+normalize_goal: true    # goal/tip을 작업반경으로 정규화(~[-1,1]). false=원본 m (정규화 효과 A/B용)
+goal_azimuth_limit_deg: 120   # goal을 시작 전방 ±120°로 제한(카메라는 후면 안 봄). null=전체 360°
+
+# 장애물 회피 학습 (obstacle-aware GCRL)
+obstacle_training: true  # true=장애물 회피(obs에 링크별 clearance 12→obs 20, 보상에 TTC severity) / false=기존(obs 8)
+n_obstacles: 3           # 에피소드당 활성 장애물 수 상한(1~이 값 랜덤 배치)
+obs_len_range: [0.3, 1.2]  # 장애물 박스 길이(x) 랜덤 범위(m, 전체치수). 지면에 붙고 내접구로 근사
+obs_wid_range: [0.3, 1.2]  # 폭(y) 랜덤 범위(m, 전체치수)
+obs_hgt_range: [0.7, 2.8]  # 높이(z) 랜덤 범위(m, 전체치수)
+# 배치 제약(rejection sampling)
+obs_start_margin: 0.30   # #1 시작자세 팔과 최소 여유(m) — 초기 관통(severity=1) 방지
+obs_goal_margin: 0.40    # #2 goal과 최소 여유(m) ≈ eps+α — 최종 접근로 확보
+obs_path_relevant: 1     # #3 start_tip→goal 경로 corridor 내에 강제할 장애물 수(0=순수 랜덤)
+obs_path_corridor: 0.6   # #3 경로선분까지 수평거리 허용폭(m). 작을수록 정면 차단(어려움)
+obs_place_tries: 20      # 후보 재시도 상한(실패 시 그 장애물 비활성)
+ttc_max: 3.0              # TTC severity 지수커널 시간상수 τ(s): severity=exp(-TTC/τ)
+w_ttc: 0.5              # 보상 TTC 페널티 가중
+
+total_steps: 2000000
+seed: 0
+eps: 0.2
+max_steps: 400
+frame_skip: 20
+
+# SAC
+buffer_size: 200000
+learning_starts: 2000
+batch_size: 256
+gamma: 0.98
+learning_rate: 0.0003
+target_entropy: -4.0   # 기본 -4(=-dim)      
+
+# HER
+n_sampled_goal: 4
+goal_selection_strategy: future
+
+# Curriculum (home-거리 기준) — home tip 근처 목표부터 점차 먼 목표로(=선회량 점진 확대)
+# 성공률 up 넘으면 허용 home-거리 inc만큼 확대
+curriculum: true
+curr_start: 0.2      # 시작 비율(0=home tip 근처만, 1=전체). 작게 시작해 swing 씨앗 학습
+curr_inc: 0.1        # 단계 상승폭
+curr_up: 0.8        # 성공률 기준
+# 적응적 탐색: target_entropy = base + te_boost·min(time_decay, success_g)
+#   time_decay=0.5^(상승후경과/halflife)(시간상한→explore-forever 방지) / success_g=(up-success)/up(성공↑→exploit)
+curr_te_boost: 4.0       # 상승 시 target_entropy 최대 증가폭(+4 → 예 -4→0, 탐색↑). 0=안 함
+curr_te_halflife: 20000  # 시간상한 감쇠(부스트 절반되는 스텝) — stuck 레벨 탐색 최대지속의 안전상한
+
+# eval/logging
+eval_freq: 10000
+n_eval: 15          # 커리큘럼 진급 판정용(현재 레벨 성공률)
+n_eval_full: 50     # ★ 고정 full-task 평가 에피소드 수(config 비교용 신뢰지표, 노이즈↓)
+eval_entropy: true  # full-task eval에서 정책 엔트로피 추정(policy/entropy_actual). 스텝당 forward 추가 → 느리면 false
+video_freq: 5000    # N스텝마다 롤아웃 영상→TB(offscreen 렌더 비용). 0=끔
