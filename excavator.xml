@@ -1,0 +1,145 @@
+<mujoco model="onshape">
+  <compiler angle="radian"/>
+
+  <!-- CAT 313 (~13t) 기준 제원 매칭 / Vortex 21t는 참고 -->
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast"/>
+
+  <visual>
+    <global offwidth="1280" offheight="960"/>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.4 0.4 0.4" specular="0 0 0"/>
+    <map znear="0.01"/>
+  </visual>
+
+  <!-- 충돌 필터링:
+       viz     = 시각 전용(충돌X)            contype=0
+       col     = 매니퓰레이터 충돌체          contype=2 conaffinity=1
+       terrain = 지면/굴착대상               contype=1 conaffinity=1
+       => col↔terrain 충돌O, col↔col 충돌X(부품끼리는 range로 처리), terrain↔terrain 충돌O -->
+  <default>
+    <geom contype="0" conaffinity="0" group="2"/>  <!-- 기본=시각전용(충돌off) -->
+    <default class="col">
+      <geom contype="2" conaffinity="1" group="3" rgba="0 1 0 0.35"/>
+    </default>
+    <default class="terrain">
+      <geom contype="1" conaffinity="1" group="0"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture name="sky" type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512"/>
+    <texture name="grid" type="2d" builtin="checker" rgb1="0.42 0.37 0.30" rgb2="0.52 0.47 0.40" width="512" height="512"/>
+    <material name="grid_mat" texture="grid" texrepeat="20 20" reflectance="0.05"/>
+    <mesh name="compact_excavator_cabin_body" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/compact_excavator_cabin_body.stl"/>
+    <mesh name="compact_excavator_turret_cabin_roller" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/compact_excavator_turret_cabin_roller.stl"/>
+    <mesh name="compact_excavator_frame_body" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/compact_excavator_frame_body.stl"/>
+    <mesh name="compact_excavator_main_drive_wheel" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/compact_excavator_main_drive_wheel.stl"/>
+    <mesh name="compact_excavator_front_wheel" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/compact_excavator_front_wheel.stl"/>
+    <mesh name="push_blade_bucket" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/push_blade_bucket.stl"/>
+    <mesh name="track_roller_wheel_1" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/track_roller_wheel_1.stl"/>
+    <mesh name="carrier_roller" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/carrier_roller.stl"/>
+    <mesh name="part01_pin_1" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/part01_pin_1.stl"/>
+    <mesh name="part02" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/part02.stl"/>
+    <mesh name="part03" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/part03.stl"/>
+    <mesh name="part04" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/part04.stl"/>
+    <mesh name="bucket" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/bucket.stl"/>
+    <mesh name="bucket_mount" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/bucket_mount.stl"/>
+  </asset>
+
+  <worldbody>
+    <!-- ── 씬: 지면 + 조명 ── -->
+    <light name="sun" pos="2 2 8" dir="0 0 -1" diffuse="0.8 0.8 0.8" specular="0.2 0.2 0.2" castshadow="true"/>
+    <!-- 평평한 지면(z=0). 굴착 task 제거로 hfield 불필요 → plane으로 단순화. 시각·충돌 모두 z=0. -->
+    <geom name="ground" class="terrain" type="plane" size="6 6 0.1" pos="0 0 0" material="grid_mat" friction="1 0.5 0.5"/>
+
+    <geom pos="0 0 0.325" quat="0.707107 0.707107 0 0" type="mesh" rgba="0.917647 0.917647 0.917647 1" mesh="compact_excavator_frame_body"/>
+    <geom pos="-0.589 -0.8 0.17" quat="0.580378 -0.403933 -0.580378 0.403933" type="mesh" rgba="0.917647 0.917647 0.917647 1" mesh="compact_excavator_main_drive_wheel"/>
+    <geom pos="0.589 -0.8 0.17" quat="-0.095982 0.700562 -0.095982 0.700562" type="mesh" rgba="0.917647 0.917647 0.917647 1" mesh="compact_excavator_main_drive_wheel"/>
+    <geom pos="-0.5805 0.8 0.17" quat="0.489175 0.872186 0 0" type="mesh" rgba="0.917647 0.917647 0.917647 1" mesh="compact_excavator_front_wheel"/>
+    <geom pos="0.5805 0.8 0.17" quat="0 0 0 -1" type="mesh" rgba="0.917647 0.917647 0.917647 1" mesh="compact_excavator_front_wheel"/>
+    <geom pos="0 1.52306 0.549007" quat="0 0 -0.589434 -0.807816" type="mesh" rgba="0.615686 0.811765 0.929412 1" mesh="push_blade_bucket"/>
+    <geom pos="0.584 -0.45 0.06" quat="0.997875 0.0651552 0 0" type="mesh" rgba="0.498039 0.498039 0.498039 1" mesh="track_roller_wheel_1"/>
+    <geom pos="0.584 0 0.06" quat="0.989321 -0.145752 0 0" type="mesh" rgba="0.498039 0.498039 0.498039 1" mesh="track_roller_wheel_1"/>
+    <geom pos="0.584 0.45 0.06" quat="1 0 0 0" type="mesh" rgba="0.498039 0.498039 0.498039 1" mesh="track_roller_wheel_1"/>
+    <geom pos="-0.574 -0.45 0.06" quat="1 0 0 0" type="mesh" rgba="0.498039 0.498039 0.498039 1" mesh="track_roller_wheel_1"/>
+    <geom pos="-0.574 0 0.06" quat="1 0 0 0" type="mesh" rgba="0.498039 0.498039 0.498039 1" mesh="track_roller_wheel_1"/>
+    <geom pos="-0.574 0.45 0.06" quat="-0.330945 0.94365 0 0" type="mesh" rgba="0.498039 0.498039 0.498039 1" mesh="track_roller_wheel_1"/>
+    <geom pos="0.484 0 0.315" quat="-0.520269 0.478874 -0.520269 0.478874" type="mesh" rgba="0.231373 0.380392 0.705882 1" mesh="carrier_roller"/>
+    <geom pos="-0.484 0 0.315" quat="-0.5 0.5 0.5 -0.5" type="mesh" rgba="0.231373 0.380392 0.705882 1" mesh="carrier_roller"/>
+    <!-- 상부선회체 base를 blade(전방+y)와 정렬: swing=0에서 팔 헤딩이 정확히 +y(정면). 원래 z90°→z-26.1° -->
+    <body name="compact_excavator_turret_cabin_roller" pos="-0.25 0 0.395" quat="0.974259 0 0 -0.225431">
+      <inertial pos="-0.250787 0.440114 0.213471" quat="0.621534 0.519644 -0.525769 0.259291" mass="9903.77" diaginertia="3942.73 3270.3 2533.13"/>
+      <!-- swing(선회): Vortex θ0 -180~180°, 11.5rpm=1.20rad/s, 최대토크 35kN·m -->
+      <joint name="tankSpin_wheel" pos="0 0 0" axis="0 0 1" range="-3.1416 3.1416" damping="2000" armature="50" actuatorfrcrange="-35000 35000"/>
+      <geom pos="-0.25 0 0" quat="0.707107 -0.707107 0 0" type="mesh" rgba="0.980392 0.713726 0.00392157 1" mesh="compact_excavator_turret_cabin_roller"/>
+      <!-- 캐빈 앞방향(긴축)을 +y로 정렬: 원본은 팔보다 33.8° 틀어짐. mesh baking 때문에 XML quat은 비선형이라 로드 후 앞축=90°가 되도록 경험적으로 산출 -->
+      <geom pos="-0.409292 0.251282 0.3814" quat="-0.206738 -0.206738 0.676210 0.676210" type="mesh" rgba="0.231373 0.380392 0.705882 1" mesh="compact_excavator_cabin_body"/>
+      <geom pos="-0.244711 0.872846 0.5804" quat="-0.172146 -0.172146 0.685832 0.685832" type="mesh" rgba="0.615686 0.811765 0.929412 1" mesh="part01_pin_1"/>
+      <!-- ── VLM용 RGB 카메라: cabin 상단-우측(world≈0.5,0.3,1.5), 전방+y 아래 25° 틸트.
+           turret 프레임(+26°) 보정된 로컬 pos/xyaxes. swing과 함께 회전(=cabin 시점).
+           fovy=84.31° → 기본 렌더 1280x480(종횡비 2.667)에서 수평 FOV=135°(약 -67~67°). -->
+      <camera name="cabin_cam" pos="0.5420 0.5990 1.5500" xyaxes="0.8984 0.4393 0.0000 -0.1856 0.3797 0.9063" fovy="84.31"/>
+      <body name="part02_cmpl" pos="-0.315228 0.835066 0.5804" quat="-0.694024 -0.447097 0.547818 0.135391">
+        <inertial pos="-0.0400794 1.21533 -0.0798734" quat="0.414391 0.572897 -0.414554 0.5729" mass="694.178" diaginertia="289.837 266.321 26.1328"/>
+        <!-- boom(붐): Vortex θ1 -7.2~+67.2°(span 74.4°). MuJoCo joint은 물리붐각과 역부호라
+             환산: qpos -0.639=+67.2°(최대들림) ~ +0.660=-7.2°(최대내림), qpos0=+30.6° -->
+        <joint name="lower_arm" pos="0 0 0" axis="0 0 1" range="-0.639 0.660" damping="1500" armature="400" actuatorfrcrange="-150000 150000"/>
+        <geom pos="0 0 -0.08" quat="1 0 0 0" type="mesh" rgba="0.776471 0.756863 0.737255 1" mesh="part02"/>
+        <body name="part03" pos="-0.84 2.355 -0.135" quat="0 -0.81771 -0.57563 0">
+          <inertial pos="0.108662 -0.601648 -0.0551673" quat="0.500744 0.50123 -0.49855 0.499471" mass="265.349" diaginertia="58.8687 57.5992 1.89678"/>
+          <!-- stick/arm(암): Vortex θ2 span 120.2° = CAD범위 120.1°와 일치 → 유지. 스틱굴착력 59.3kN -->
+          <joint name="upperToLow" pos="0 0 0" axis="0 0 1" range="-1.8379 0.2583" damping="1000" armature="250" actuatorfrcrange="-90000 90000"/>
+          <geom pos="0 0 -0.055" quat="0 -1 0 0" type="mesh" rgba="0.980392 0.713726 0.00392157 1" mesh="part03"/>
+          <body name="part04" pos="0.12 -1.54033 0" quat="0 0.920023 -0.391864 0">
+            <inertial pos="0.213805 0.426514 0.0549964" quat="0.702955 0.702986 -0.076365 -0.0763757" mass="132.604" diaginertia="14.3799 11.5873 6.4852"/>
+            <!-- bucket(버킷): Vortex θ3 span 173.8° = CAD범위 173°와 일치 → 유지. 버킷굴착력 98.7kN -->
+            <!-- Vortex 버킷 작동범위 θ3: -149.3°(컬/닫힘) ~ +24.5°(열림). axis 반전+ref로 -2.6058=컬, +0.4276=열림 정렬 -->
+            <joint name="scoop1" pos="0 0 0" axis="0 0 -1" ref="0.4276" range="-1.3 0.4276" damping="500" armature="120" actuatorfrcrange="-60000 60000"/>
+            <geom pos="0.06 0.14 0.055" quat="0.5 -0.5 -0.5 -0.5" type="mesh" rgba="0.768627 0.886275 0.952941 1" mesh="part04"/>
+            <geom pos="0.0787181 0.979611 0.055" quat="0.0627905 0 0 0.998027" type="mesh" rgba="0.615686 0.811765 0.929412 1" mesh="bucket"/>
+            <geom pos="0.17 0.308 0.055" quat="0 -0.707107 0 -0.707107" type="mesh" rgba="0.498039 0.498039 0.498039 1" mesh="bucket_mount"/>
+
+            <!-- ── 버킷 충돌 포켓(part04 로컬): 박스4개로 스쿱 셸 근사. +y(치아)·+z(위) 개방 ──
+                 버킷 메시 범위 x[0.02,0.48] y[0.26,1.01] z[-0.25,0.36] 기준 -->
+            <geom name="bkt_bottom" class="col" type="box" pos="0.247 0.635 -0.215" size="0.23 0.37 0.03"/>
+            <geom name="bkt_back"   class="col" type="box" pos="0.247 0.292 0.055" size="0.23 0.03 0.27"/>
+            <geom name="bkt_left"   class="col" type="box" pos="0.046 0.635 0.055" size="0.03 0.37 0.27"/>
+            <geom name="bkt_right"  class="col" type="box" pos="0.447 0.635 0.055" size="0.03 0.37 0.27"/>
+            <!-- 버킷 끝(치아) site: GCRL achieved-goal -->
+            <site name="bucket_tip" pos="0.247 0.98 -0.13" size="0.04" rgba="1 0 0 1"/>
+          </body>
+        </body>
+      </body>
+    </body>
+
+  </worldbody>
+
+  <!-- ── 접촉 제외: 선회베어링 모사(상부선회체 ↔ 하부프레임 접촉 제거) ─── -->
+  <contact>
+    <exclude body1="world" body2="compact_excavator_turret_cabin_roller"/>
+  </contact>
+
+  <!-- ── 액추에이터 ───────────────────────────────────────────
+       제어방식: 4개 모두 position (action = 목표 각도, rad)
+       forcerange = 위 joint actuatorfrcrange와 동일(굴착력/선회토크 기반)
+       선회는 관성이 커서 kv(감쇠) 추가로 진동 억제. kp/kv는 초기값 → 뷰어에서 튜닝 -->
+  <actuator>
+    <position name="swing_act"  joint="tankSpin_wheel" kp="80000" kv="48000" ctrlrange="-3.1416 3.1416" forcerange="-35000 35000"/>
+    <position name="boom_act"   joint="lower_arm"   kp="3000000" kv="70000" ctrlrange="-0.639 0.660"   forcerange="-150000 150000"/>
+    <position name="stick_act"  joint="upperToLow"  kp="600000"  kv="30000" ctrlrange="-1.8379 0.2583" forcerange="-90000 90000"/>
+    <position name="bucket_act" joint="scoop1"      kp="1000000" kv="25000" ctrlrange="-1.3 0.4276"      forcerange="-60000 60000"/>
+  </actuator>
+
+  <!-- ── 센서 (RL 관측 / GCRL goal) ─────────────────────────── -->
+  <sensor>
+    <jointpos name="swing_pos"  joint="tankSpin_wheel"/>
+    <jointpos name="boom_pos"   joint="lower_arm"/>
+    <jointpos name="stick_pos"  joint="upperToLow"/>
+    <jointpos name="bucket_pos" joint="scoop1"/>
+    <jointvel name="swing_vel"  joint="tankSpin_wheel"/>
+    <jointvel name="boom_vel"   joint="lower_arm"/>
+    <jointvel name="stick_vel"  joint="upperToLow"/>
+    <jointvel name="bucket_vel" joint="scoop1"/>
+    <framepos name="bucket_tip_pos" objtype="site" objname="bucket_tip"/>
+  </sensor>
+
+</mujoco>
