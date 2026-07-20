@@ -1,81 +1,74 @@
 """
-VLM 입력 페어 생성 데모/CLI — 같은 씬에서 (1) cabin_cam RGB, (2) 극좌표 3D grid map.
-둘 다 480x1280(동일 종횡비)로 저장 → VLM에 나란히 입력.
+VLM 입력 페어 생성 — 상차(loading) 미션 씬(흙더미 + 덤프트럭 + 랜덤 장애물)에서
+(1) cabin_cam RGB, (2) 극좌표 color-height grid map. 둘 다 동일 종횡비로 저장 → VLM에 나란히 입력.
 
-  conda run -n seok python VLM/make_gridmap.py            # 데모(rock 주입+굴착)
-  conda run -n seok python VLM/make_gridmap.py --plain    # 순수 excavator.xml 현상태
+★ 이 씬은 **평가(mission) 전용** — 흙더미·트럭 포함. (학습 env는 기존대로 장애물만, 변경 없음)
+gridmap = 흙더미(source)+장애물(avoid) 높이. 트럭은 RGB로 인식(gridmap 제외).
+scene.json에 장애물·pile_pick·truck_dump 저장 → mission_eval이 GCRL로 동일 장애물 재현·실행.
 
-산출: VLM/out/  cabin_init.png (RGB) · gridmap.png (높이맵) · gridmap.npz/json · gridmap_legend.txt
-색↔높이 매핑(colorbar/범위)은 이미지에 넣지 않고 legend 텍스트로 출력(→ 프롬프트에 삽입).
+  conda run -n seok python VLM/make_gridmap.py --seed 3
+산출: VLM/out/  cabin_init.png · gridmap.png · gridmap.npz/json · gridmap_legend.txt · scene.json
 """
-import os, sys, argparse
+import os, sys, json, argparse
 import numpy as np
 import mujoco
 
-HERE = os.path.dirname(os.path.abspath(__file__))   # .../VLM
+HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
-sys.path.insert(0, ROOT)     # terrain (공유 자산)
-sys.path.insert(0, HERE)     # gridmap (VLM 모듈)
-import terrain
+sys.path.insert(0, os.path.join(ROOT, "Model", "Version4"))   # HOME 자세
+sys.path.insert(0, HERE)                                       # gridmap, mission_scene
 import gridmap
+import mission_scene
+from excavator_env import HOME
 
-XML = os.path.join(ROOT, "excavator.xml")
 OUT = os.path.join(HERE, "out")
-
-import scene   # 공유 데모 씬(트럭+장애물+dig) — sequential.py와 동일 씬
-
-
-def build_model(with_rocks):
-    return scene.build_model() if with_rocks else mujoco.MjModel.from_xml_path(XML)
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--plain", action="store_true", help="rock 주입/굴착 없이 현재 xml 그대로")
+    ap.add_argument("--seed", type=int, default=0, help="랜덤 장애물 시드(scene 재현용)")
     ap.add_argument("--n_r", type=int, default=45)
     ap.add_argument("--n_theta", type=int, default=90)
     ap.add_argument("--r_max", type=float, default=4.5)
-    ap.add_argument("--w", type=int, default=1280)     # RGB/grid 공통 픽셀 크기
+    ap.add_argument("--w", type=int, default=1280)
     ap.add_argument("--h", type=int, default=480)
-    ap.add_argument("--swing", type=float, default=0.0, help="선회각(rad) — 카메라도 함께 회전")
+    ap.add_argument("--fovx", type=float, default=135.0, help="RGB 수평 FOV(도)")
     a = ap.parse_args()
     os.makedirs(OUT, exist_ok=True)
 
-    m = build_model(with_rocks=not a.plain)
+    m, obstacles = mission_scene.build_model(a.seed)     # 흙더미+트럭 고정 + 장애물 랜덤
     d = mujoco.MjData(m)
-    terrain.reset_terrain(m)                       # hfield 평탄 초기화(필수)
-    d.qpos[0] = a.swing
-
-    if not a.plain:
-        scene.carve_dig(m)                         # 왼쪽 굴착지(공유 씬) — 트럭은 build서 안착됨
+    d.qpos[:4] = HOME                                    # 시작 자세(학습과 동일)
     mujoco.mj_forward(m, d)
 
-    # (1) cabin_cam RGB (grid와 동일 픽셀 크기)
+    # (1) cabin_cam RGB (수평 FOV=fovx에 맞춰 fovy 설정)
     from PIL import Image
+    cid = mujoco.mj_name2id(m, mujoco.mjtObj.mjOBJ_CAMERA, "cabin_cam")
+    m.cam_fovy[cid] = np.rad2deg(2 * np.arctan(np.tan(np.deg2rad(a.fovx) / 2) / (a.w / a.h)))
     r = mujoco.Renderer(m, a.h, a.w)
     r.update_scene(d, camera="cabin_cam")
     rgb_path = os.path.join(OUT, "cabin_init.png")
     Image.fromarray(r.render()).save(rgb_path)
     r.close()
 
-    # (2) 극좌표 3D grid map (동일 씬)
-    obj_bodies = None if a.plain else scene.SCENE_BODIES   # 정적 물체 → 명시 지정으로 인식
+    # (2) 극좌표 grid map (흙더미 source + 장애물 avoid; 트럭 제외)
     grid = gridmap.polar_height_grid(m, d, n_r=a.n_r, n_theta=a.n_theta, r_max=a.r_max,
-                                     object_bodies=obj_bodies)
-    print(f"grid H shape={grid['H'].shape}  object_geoms={grid['n_object_geoms']}  "
-          f"h range=[{grid['H'].min():.3f}, {grid['H'].max():.3f}] m")
+                                     object_bodies=mission_scene.gridmap_bodies(obstacles),
+                                     ground_z=gridmap.GROUND_Z)
+    print(f"grid H shape={grid['H'].shape}  물체 geom={grid['n_object_geoms']}  "
+          f"h range=[{grid['H'].min():.2f}, {grid['H'].max():.2f}] m  장애물={len(obstacles)}개")
     grid_path = gridmap.render_grid(grid, os.path.join(OUT, "gridmap.png"), px=(a.w, a.h))
     gridmap.save_grid(grid, os.path.join(OUT, "gridmap.npz"), os.path.join(OUT, "gridmap.json"))
 
-    # (3) 색↔높이 legend (프롬프트용) → 콘솔 + 파일
-    legend = gridmap.color_legend(r_max=a.r_max)
-    leg_path = os.path.join(OUT, "gridmap_legend.txt")
-    open(leg_path, "w").write(legend)
+    # (3) legend + scene 저장(mission_eval/GCRL 재현용)
+    open(os.path.join(OUT, "gridmap_legend.txt"), "w").write(gridmap.color_legend(r_max=a.r_max))
+    json.dump({"seed": a.seed, "pile_pick": mission_scene.PILE_PICK, "truck_dump": mission_scene.TRUCK_DUMP,
+               "obstacles": obstacles}, open(os.path.join(OUT, "scene.json"), "w"), indent=2)
 
     print("saved RGB :", rgb_path)
-    print("saved grid:", grid_path, "(+ .npz/.json)")
-    print("saved legend:", leg_path)
-    print("\n===== 프롬프트용 색 legend =====\n" + legend)
+    print("saved grid:", grid_path)
+    print("saved scene: %s/scene.json (pile_pick=%s truck_dump=%s 장애물 %d개)"
+          % (OUT, mission_scene.PILE_PICK, mission_scene.TRUCK_DUMP, len(obstacles)))
 
 
 if __name__ == "__main__":

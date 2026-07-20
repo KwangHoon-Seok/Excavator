@@ -1,0 +1,56 @@
+run_name: Version6/v6_auto
+reward: reward_decomposed
+random_start: false
+normalize_goal: true
+goal_azimuth_limit_deg: 120
+
+# 장애물 회피(obstacle-aware GCRL) — 새 분포(높이↓·goal여유↑·경로t↓)
+obstacle_training: true
+n_obstacles: 3
+obs_len_range: [0.3, 1.2]
+obs_wid_range: [0.3, 1.2]
+obs_hgt_range: [0.7, 2.5]
+obs_start_margin: 0.30
+obs_goal_margin: 0.60
+obs_path_relevant: 1
+obs_path_corridor: 0.6
+obs_place_tries: 20
+obs_path_tmax: 0.60
+ttc_max: 1.5
+w_ttc: 0.2          # TTC 포함(V6 목표: reaching↑ + 충돌 억제)
+w_stuck: 0.0        # stuck 페널티 미사용(V5 negative result)
+
+total_steps: 2000000
+seed: 0
+eps: 0.2
+max_steps: 400
+frame_skip: 20
+
+# SAC
+buffer_size: 200000
+learning_starts: 2000
+batch_size: 256
+gamma: 0.98
+learning_rate: 0.0003
+target_entropy: -4.0
+
+# HER
+n_sampled_goal: 4
+goal_selection_strategy: future
+
+# ── 자동 커리큘럼(성공률 frontier) ──
+curriculum_mode: auto     # auto=성공률 frontier / distance=기존 / azimuth=폐기
+curriculum: false         # auto 모드에선 CurriculumCallback 미사용
+auto_mix: 0.2             # target(uniform full) 혼합비
+auto_eps: 0.05            # frontier 가중 바닥(전역 탐색)
+auto_ema: 0.1             # bin 성공률 EMA 갱신율
+auto_az_bins: 6           # 방위 bin (스윙 난이도 축)
+auto_r_bins: 3            # 반경 bin
+auto_z_bins: 2            # 높이 bin
+
+# eval/logging
+eval_freq: 10000
+n_eval: 15
+n_eval_full: 50
+eval_entropy: true
+video_freq: 0

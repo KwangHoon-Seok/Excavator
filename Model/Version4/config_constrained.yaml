@@ -1,0 +1,63 @@
+run_name: Version7/v7_constrained
+reward: reward_decomposed
+random_start: false
+normalize_goal: true
+goal_azimuth_limit_deg: 120
+
+# 장애물 회피 — 새 분포
+obstacle_training: true
+n_obstacles: 3
+obs_len_range: [0.3, 1.2]
+obs_wid_range: [0.3, 1.2]
+obs_hgt_range: [0.7, 2.5]
+obs_start_margin: 0.30
+obs_goal_margin: 0.60
+obs_path_relevant: 1
+obs_path_corridor: 0.6
+obs_place_tries: 20
+obs_path_tmax: 0.60
+ttc_max: 1.5
+w_ttc: 0.2            # 초기 λ 기저(lambda_init 미지정 시 사용)
+w_stuck: 0.0
+
+# ── Constrained RL (Lagrangian / RCPO) ──
+constrained: true      # true=적응 λ(충돌≤ε 제약) / false=고정 w_ttc(원본 soft penalty)
+cost_limit: 0.12       # ε: 목표 collision rate (낮추면 안전↑·도달↓)
+lambda_init: 0.2       # λ 초기값(=현 w_ttc 수준)
+lambda_lr: 0.05        # dual ascent step(I gain, per eval)
+lambda_kp: 0.10        # P gain(충돌 과다 시 빠른 반응, positive violation만)
+lambda_max: 2.0        # λ 상한(과회피 방지)
+
+total_steps: 2000000
+seed: 0
+eps: 0.2
+max_steps: 400
+frame_skip: 20
+
+# SAC
+buffer_size: 200000
+learning_starts: 2000
+batch_size: 256
+gamma: 0.98
+learning_rate: 0.0003
+target_entropy: -4.0
+
+# HER
+n_sampled_goal: 4
+goal_selection_strategy: future
+
+# Curriculum — constrained 변수만 격리하려 distance(기존) 사용. auto와 병용은 forgetting 수정 후 별도.
+curriculum: true
+curriculum_mode: distance
+curr_start: 0.2
+curr_inc: 0.1
+curr_up: 0.65
+curr_te_boost: 4.0
+curr_te_halflife: 20000
+
+# eval/logging
+eval_freq: 10000
+n_eval: 15
+n_eval_full: 50
+eval_entropy: true
+video_freq: 0

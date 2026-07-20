@@ -19,3 +19,10 @@ terrain.py
 view_excavator.py
 viz_reachable_waypoint.py
 viz_sampling_compare.py
+
+Evaluate/plots/
+Evaluate/vlm_guided/out/
+Evaluate/vlm_guided/out_clean/
+Evaluate/vlm_guided/out_smooth/
+
+figures/

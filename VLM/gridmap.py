@@ -17,38 +17,16 @@ import json
 import numpy as np
 import mujoco
 
-GROUND_Z = -0.445          # 평탄 지면 표면 z (excavator.xml)
+GROUND_Z = 0.0             # 평탄 지면 표면 z (excavator.xml: plane 지면, hfield 제거됨)
 # 극좌표 원점 = world (0,0). VLM의 x=r·sinθ, y=r·cosθ 가 곧 world x,y (로컬=월드).
 # (실제 선회축은 world (-0.25,0)이나 0.25m 차이는 무시 — world 정합 우선)
 SWING_ORIGIN = (0.0, 0.0)
 
 
-def _hfield_meta(model):
-    gid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_GEOM, "ground")
-    hid = model.geom_dataid[gid]
-    rx, ry, ztop, _base = model.hfield_size[hid]
-    return dict(gid=gid, hid=hid,
-                nrow=int(model.hfield_nrow[hid]), ncol=int(model.hfield_ncol[hid]),
-                rx=float(rx), ry=float(ry), ztop=float(ztop),
-                pos=np.array(model.geom_pos[gid]), adr=int(model.hfield_adr[hid]))
-
-
-def _sample_terrain_z(model, X, Y):
-    """world (X,Y) 격자의 지형 표면 z 를 hfield bilinear 샘플로 반환. 범위 밖은 ground_z."""
-    hf = _hfield_meta(model)
-    n = hf["nrow"] * hf["ncol"]
-    grid = np.asarray(model.hfield_data[hf["adr"]:hf["adr"] + n]).reshape(hf["nrow"], hf["ncol"])
-    # world → 연속 셀좌표
-    fc = (X - hf["pos"][0] + hf["rx"]) / (2 * hf["rx"]) * (hf["ncol"] - 1)  # col(x)
-    fr = (Y - hf["pos"][1] + hf["ry"]) / (2 * hf["ry"]) * (hf["nrow"] - 1)  # row(y)
-    inside = (fc >= 0) & (fc <= hf["ncol"] - 1) & (fr >= 0) & (fr <= hf["nrow"] - 1)
-    c0 = np.clip(np.floor(fc).astype(int), 0, hf["ncol"] - 2)
-    r0 = np.clip(np.floor(fr).astype(int), 0, hf["nrow"] - 2)
-    tc, tr = fc - c0, fr - r0
-    v = (grid[r0, c0] * (1 - tc) * (1 - tr) + grid[r0, c0 + 1] * tc * (1 - tr)
-         + grid[r0 + 1, c0] * (1 - tc) * tr + grid[r0 + 1, c0 + 1] * tc * tr)
-    z = hf["pos"][2] + v * hf["ztop"]                # 정규화 elevation → world z
-    return np.where(inside, z, GROUND_Z)
+def _sample_terrain_z(model, X, Y, ground_z=GROUND_Z):
+    """지면은 평탄 plane(z=ground_z) → 어디서나 ground_z. (hfield 제거로 지형 기복 없음.
+    장애물/물체 높이는 polar_height_grid가 geom AABB로 별도 덮어씀.)"""
+    return np.full_like(X, ground_z, dtype=float)
 
 
 def _object_geoms(model, data, object_bodies=None):
@@ -88,21 +66,28 @@ def polar_height_grid(model, data, *, origin=SWING_ORIGIN, r_max=4.5, r_min=0.0,
     X = origin[0] + RR * np.sin(TH)
     Y = origin[1] + RR * np.cos(TH)
 
-    z = _sample_terrain_z(model, X, Y)                       # 지형 표면 z
+    z = _sample_terrain_z(model, X, Y, ground_z)             # 평탄 지면 표면 z (=ground_z)
 
     # object 상단을 셀별 max 로 덮어씀. footprint(xy)와 높이(z)를 분리:
     # geom 로컬 AABB 8코너를 월드로 변환 → 월드 축정렬 bbox(발자국) + 최상단 z.
     # (geom_rbound[바운딩구]는 높은 물체의 xy를 과대평가하므로 사용 안 함)
     gids = _object_geoms(model, data, object_bodies)
     for g in gids:
-        aabb = model.geom_aabb[g]                            # (cx,cy,cz, hx,hy,hz) 로컬
-        c0 = aabb[:3]; hs = aabb[3:]
         gp = data.geom_xpos[g]; R = data.geom_xmat[g].reshape(3, 3)
-        corners = np.array([gp + R @ (c0 + hs * np.array([sx, sy, sz]))
+        did = model.geom_dataid[g]
+        if model.geom_type[g] == mujoco.mjtGeom.mjGEOM_MESH and did >= 0:
+            # mesh(트럭 등): 실제 정점을 월드로 → 발자국(xy AABB)+최상단 z.
+            va, vn = int(model.mesh_vertadr[did]), int(model.mesh_vertnum[did])
+            V = np.asarray(model.mesh_vert[va:va + vn]).reshape(-1, 3)
+            pts = gp + V @ R.T
+        else:
+            # box: geom_size(런타임 갱신) 8코너. geom_aabb는 컴파일 시점값이라 미사용.
+            hs = np.array(model.geom_size[g], float)
+            pts = np.array([gp + R @ (hs * np.array([sx, sy, sz]))
                             for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)])
-        xmin, ymin = corners[:, 0].min(), corners[:, 1].min()
-        xmax, ymax = corners[:, 0].max(), corners[:, 1].max()
-        top_z = float(corners[:, 2].max())                   # 물체 최상단 높이
+        xmin, ymin = pts[:, 0].min(), pts[:, 1].min()
+        xmax, ymax = pts[:, 0].max(), pts[:, 1].max()
+        top_z = float(pts[:, 2].max())                       # 물체 최상단 높이
         mask = (X >= xmin) & (X <= xmax) & (Y >= ymin) & (Y <= ymax)
         if mask.any():
             z[mask] = np.maximum(z[mask], top_z)
@@ -116,14 +101,14 @@ def polar_height_grid(model, data, *, origin=SWING_ORIGIN, r_max=4.5, r_min=0.0,
 
 
 # ── 높이 밴드 + 색 (프롬프트로 VLM에 알려줄 값) ──────────────────
-#   높이 h = surface_z − ground(−0.445). BANDS = 밴드 경계(n+1개) → n밴드. 0.5 m 단위.
-#   −0.6 = hfield 물리 굴착 한계, +4.0 = 버킷 도달 최대 높이(측정 4.06).
-#   굴착=파랑, 지면(0~0.5)=회색 중립, 그 위는 노랑→주황→빨강 램프(높을수록 붉음, YlOrRd).
-BANDS = [-0.6, 0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
-BAND_COLORS = ["#2c7fb8", "#d9d9d9", "#ffffb2", "#fed976", "#feb24c",
-               "#fd8d3c", "#fc4e2a", "#e31a1c", "#b10026"]
-BAND_DESC = ["굴착(hole)", "지면 0~0.5", "0.5~1", "1~1.5", "1.5~2",
-             "2~2.5", "2.5~3", "3~3.5", "3.5~4 m"]
+#   높이 h = surface_z − ground(0). BANDS = 밴드 경계(n+1개) → n밴드.
+#   지면 plane(hfield/dig 제거) → 음수 없음. 장애물 박스 높이 0.7~2.8 m 범위.
+#   지면(0~0.4)=회색 중립, 그 위 장애물은 노랑→주황→빨강 램프(높을수록 붉음, YlOrRd).
+BANDS = [0.0, 0.4, 0.8, 1.2, 1.6, 2.0, 2.4, 2.8]
+BAND_COLORS = ["#d9d9d9", "#ffffb2", "#fed976", "#feb24c",
+               "#fd8d3c", "#fc4e2a", "#e31a1c"]
+BAND_DESC = ["지면 0~0.4", "0.4~0.8", "0.8~1.2", "1.2~1.6",
+             "1.6~2.0", "2.0~2.4", "2.4~2.8 m (장애물)"]
 
 
 def _cmap_norm(bands=BANDS, colors=BAND_COLORS):
@@ -166,13 +151,14 @@ def render_grid(grid, path, px=(1280, 480), dpi=100, bands=BANDS, colors=BAND_CO
     ax.axvline(0, color="0.35", lw=1.0, ls="--")           # θ=0 정면(forward) 기준선
     ax.set_xlabel("azimuth  θ (deg)   [−90 left  |  0 forward  |  +90 right]", fontsize=11)
     ax.set_ylabel("distance  r (m)", fontsize=11)
+    # 트럭 포함 모든 물체는 높이 blob으로 표시 — VLM이 RGB(외형)↔gridmap(위치)을 대조해 종류 판단.
 
     # 범례: 오른쪽 상단에 오버레이(상단 고-r 영역은 대개 빈 평지). 색↔높이 밴드.
     labels = [f"{bands[i]:g}~{bands[i+1]:g}" for i in range(len(colors))]
-    labels[0] += " (dig)"
+    labels[0] += " (ground)"
     handles = [Patch(facecolor=colors[i], edgecolor="0.3", label=labels[i])
                for i in range(len(colors))]
-    ax.legend(handles=handles, loc="upper right", ncol=5, fontsize=9,
+    ax.legend(handles=handles, loc="lower right", ncol=5, fontsize=9,
               title="height h (m)", title_fontsize=9, framealpha=0.92,
               borderpad=0.4, handlelength=1.1, handleheight=1.1,
               columnspacing=0.9, handletextpad=0.4).set_zorder(10)

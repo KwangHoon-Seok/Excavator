@@ -26,10 +26,11 @@ def parse_md(md_path):
                 k, v = body.split(":", 1); settings[k.strip()] = v.strip()
         elif section == "cases" and s.startswith("|"):
             cells = [c.strip() for c in s.strip("|").split("|")]
-            if not cells or cells[0] in ("id", "") or set(cells[0]) <= set("-"):
-                continue                                 # 헤더/구분선 스킵
+            if not cells or set("".join(cells)) <= set("-| "):
+                continue                                 # 구분선 스킵
             cases.append(cells)
-    return settings, cases
+    header, rows = (cases[0], cases[1:]) if cases else ([], [])
+    return settings, header, rows
 
 
 def to_ramp(cell):
@@ -48,35 +49,46 @@ def main():
     ap.add_argument("--dry", action="store_true")
     a = ap.parse_args()
 
-    settings, cases = parse_md(a.md)
+    settings, header, rows = parse_md(a.md)
     budget = int(settings.get("budget_steps", 2000000))
     max_par = int(settings.get("max_parallel", 3))
     base_cfg_path = os.path.join(ROOT, settings.get("base_config", "Model/config.yaml"))
     log_root_rel = settings.get("log_root", "Model/logs/Version3")
+    train_script = os.path.join(ROOT, settings.get("train_script", "Model/train.py"))  # 버전별 코드 스냅샷 지원
     base = yaml.safe_load(open(base_cfg_path))
-    # CASES 컬럼: id, w_ttc, ttc_max, curr_up, w_ttc_ramp, resume, note
+    ver = os.path.basename(log_root_rel)                 # 예: Version4
     for sub in ("checkpoints", "logs", os.path.join("..", "Evaluate", "plots")):
-        os.makedirs(os.path.join(ROOT, "Model", sub, "Version3"), exist_ok=True)
+        os.makedirs(os.path.join(ROOT, "Model", sub, ver), exist_ok=True)
 
+    # 헤더 기반: id/note/w_ttc_ramp/resume 외 컬럼명은 그대로 config 키로(숫자면 float, 아니면 문자열)
     jobs = []
-    for row in cases:
-        cid, w_ttc, ttc_max, curr_up, ramp, resume = (row + [""] * 7)[:6]
+    for cells in rows:
+        row = {h: v for h, v in zip(header, cells)}
+        cid = row.get("id", "").strip()
+        if not cid:
+            continue
         cfg = dict(base)
-        cfg["run_name"] = f"Version3/{cid}"
+        cfg["run_name"] = f"{ver}/{cid}"
         cfg["total_steps"] = budget
         cfg["obstacle_training"] = True
-        if w_ttc not in ("", "-"): cfg["w_ttc"] = float(w_ttc)
-        if ttc_max not in ("", "-"): cfg["ttc_max"] = float(ttc_max)
-        if curr_up not in ("", "-"): cfg["curr_up"] = float(curr_up)
-        r = to_ramp(ramp)
-        if r:
-            cfg["w_ttc_ramp"] = r; cfg["w_ttc"] = r[0]      # 램프 시작값
+        resume = ""
+        for k, v in row.items():
+            if k in ("id", "note") or v in ("", "-"):
+                continue
+            if k == "w_ttc_ramp":
+                r = to_ramp(v)
+                if r: cfg["w_ttc_ramp"] = r; cfg["w_ttc"] = r[0]
+            elif k == "resume":
+                resume = v
+            else:
+                try: cfg[k] = float(v)          # 숫자 컬럼(w_ttc, ttc_max, curr_up, ...)
+                except ValueError: cfg[k] = v   # 문자열 컬럼(curriculum_mode 등)
         cfg_path = os.path.join(ROOT, log_root_rel, f"{cid}_config.yaml")
         os.makedirs(os.path.dirname(cfg_path), exist_ok=True)
         yaml.safe_dump(cfg, open(cfg_path, "w"))
         jobs.append((cid, cfg_path, resume))
-        print(f"[cfg] {cid}: w_ttc={cfg['w_ttc']} ttc_max={cfg['ttc_max']} curr_up={cfg.get('curr_up')} "
-              f"ramp={cfg.get('w_ttc_ramp')} steps={budget}")
+        ov = {k: row[k] for k in row if k not in ("id", "note") and row[k] not in ("", "-")}
+        print(f"[cfg] {cid}: {ov} steps={budget}")
 
     if a.dry:
         print("[dry] config만 생성. 실행 생략."); return
@@ -88,7 +100,7 @@ def main():
         while pending and len(running) < max_par:
             cid, cfg_path, resume = pending.pop(0)
             logf = open(os.path.join(ROOT, log_root_rel, f"{cid}.out"), "w")
-            cmd = [PY, os.path.join(ROOT, "Model", "train.py"), cfg_path]
+            cmd = [PY, train_script, cfg_path]
             if resume not in ("", "-"): cmd += ["--resume", resume]
             p = subprocess.Popen(cmd, stdout=logf, stderr=subprocess.STDOUT, cwd=ROOT)
             running.append((cid, p))
