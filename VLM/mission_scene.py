@@ -14,7 +14,7 @@ import numpy as np
 import mujoco
 import yaml
 
-ROOT = "/home/aimlab/qwen-vlm"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 XML = os.path.join(ROOT, "excavator.xml")
 _CFG = yaml.safe_load(open(os.path.join(ROOT, "Model", "Version4", "config.yaml")))
 _HOME_TIP_XY = np.array([0.0, 3.62])          # 시작자세 tip 근사(장애물 회피용)
@@ -114,8 +114,8 @@ def _pile_xml(cx, cy):
     return s + "    </body>\n"
 
 
-def _truck_xml(cx, cy):
-    return (f'    <body name="truck" pos="{cx} {cy} 0" quat="{TRUCK_QUAT}">\n'
+def _truck_xml(cx, cy, quat=TRUCK_QUAT):
+    return (f'    <body name="truck" pos="{cx} {cy} 0" quat="{quat}">\n'
             f'      <geom type="mesh" mesh="dumptruck" rgba="0.72 0.56 0.20 1" contype="0" conaffinity="0"/>\n'
             f'    </body>\n')
 

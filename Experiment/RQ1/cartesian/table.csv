@@ -1,0 +1,4 @@
+modality,safe_success,success,collision,stage1,stage2,path
+RGB+Height,0.690,0.950,0.260,1.000,0.950,16.4
+RGB only,0.000,0.000,0.080,0.000,0.180,11.8
+Height only,0.770,0.980,0.210,1.000,0.980,16.2

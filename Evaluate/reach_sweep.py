@@ -11,7 +11,7 @@ import numpy as np
 import mujoco
 from PIL import Image
 
-ROOT = "/home/aimlab/qwen-vlm"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 XML = os.path.join(ROOT, "excavator.xml")
 m = mujoco.MjModel.from_xml_path(XML)
 d = mujoco.MjData(m)

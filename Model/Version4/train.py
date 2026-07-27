@@ -126,7 +126,8 @@ def train(cfg, resume=None):
           f"conda run -n seok python Evaluate/visualize.py --ckpt {ckpt}")
     # 버퍼까지 복원한 경우만 스텝 카운터 이어감. 가중치만 warm-start면 리셋(버퍼 재충전 필요).
     reset_ts = (not resume) or (not buffer_loaded)
-    model.learn(total_timesteps=cfg["total_steps"], callback=cbs, progress_bar=True,
+    pbar = os.environ.get("PROGRESS_BAR", "1") != "0"   # 병렬 detach 실행 시 rich 충돌 회피용 off
+    model.learn(total_timesteps=cfg["total_steps"], callback=cbs, progress_bar=pbar,
                 reset_num_timesteps=reset_ts)
     model.save(ckpt)
     model.save_replay_buffer(os.path.splitext(ckpt)[0] + "_replay.pkl")   # 다음 resume용 버퍼 저장

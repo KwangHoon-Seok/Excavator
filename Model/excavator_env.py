@@ -14,7 +14,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import mujoco
 
-ROOT = "/home/aimlab/qwen-vlm"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 import reward as R  # Model/reward.py  # noqa: E402
@@ -53,6 +53,8 @@ class ExcavatorRHEREnv(gym.Env):
         self._n_obs_geom = 4               # 주입할 장애물 geom 수(활성 ≤ 이 값)
         if obstacle_training:              # 장애물 box 주입(contype=4=물리 무시, mj_geomDistance만). 크기는 reset마다 랜덤
             xml = open(XML).read()
+            # from_xml_string은 상대 meshdir을 CWD 기준으로 찾으므로, 실행 위치와 무관하도록 절대경로로 치환
+            xml = xml.replace('meshdir="excavatorURDF"', 'meshdir="%s"' % os.path.join(ROOT, "excavatorURDF"))
             inj = ''.join('<body name="obs%d" pos="0 0 %d"><geom name="obs%d_g" type="box" '
                           'size="0.3 0.3 0.3" rgba="0.65 0.4 0.4 0.75" contype="4" conaffinity="0"/></body>'
                           % (i, 50 + i, i) for i in range(self._n_obs_geom))

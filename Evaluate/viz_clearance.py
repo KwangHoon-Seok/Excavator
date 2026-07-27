@@ -6,7 +6,7 @@ import os, json
 import numpy as np
 import mujoco
 
-ROOT = "/home/aimlab/qwen-vlm"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 XML = os.path.join(ROOT, "excavator.xml")
 PRIMS = os.path.join(ROOT, "Model", "arm_primitives.json")
 OUT = os.path.join(ROOT, "Evaluate", "plots")

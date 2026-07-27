@@ -30,7 +30,8 @@ from excavator_env import ExcavatorRHEREnv                     # noqa: E402
 _CFG = yaml.safe_load(open(os.path.join(ROOT, "Model", "Version4", "config.yaml")))
 # 학습과 동일한 env 구성(장애물 분포·배치 제약 일치) — 실행 env와 렌더 env가 같아야 씬이 유효
 _ENV_KEYS = ("reward", "random_start", "normalize_goal", "goal_azimuth_limit_deg",
-             "obstacle_training", "n_obstacles", "obs_len_range", "obs_wid_range", "obs_hgt_range",
+             "obstacle_training", "n_obstacles", "n_obs_geom",
+             "obs_len_range", "obs_wid_range", "obs_hgt_range",
              "obs_start_margin", "obs_goal_margin", "obs_path_relevant", "obs_path_corridor",
              "obs_place_tries", "obs_path_tmax", "ttc_max", "w_ttc", "curriculum_mode", "az_start_deg",
              "eps", "max_steps", "frame_skip")

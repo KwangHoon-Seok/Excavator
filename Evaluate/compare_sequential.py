@@ -8,11 +8,12 @@
 """
 import os, sys
 import numpy as np
-sys.path.insert(0, os.path.join("/home/aimlab/qwen-vlm", "Model"))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "Model"))
 from excavator_env import ExcavatorRHEREnv
 from stable_baselines3 import SAC
 
-ROOT = "/home/aimlab/qwen-vlm"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MODELS = {
     "random_O (Total_reward)": f"{ROOT}/Model/checkpoints/Version2/Total_reward_0705.zip",
     "random_X (without_rand)": f"{ROOT}/Model/checkpoints/Version2/without_random_position_0706.zip",
