@@ -1,0 +1,23 @@
+{
+  "RQ1": {
+    "both": "Qwen3.5-27B__both__id__rq4_full",
+    "rgb_only": "Qwen3.5-27B__rgb_only__id__rq1_rgb_only",
+    "height_only": "Qwen3.5-27B__height_only__id__rq1_height_only"
+  },
+  "RQ2": {
+    "Qwen3.5-4B": "Qwen3.5-4B__both__id__rq4_full",
+    "Qwen3.5-27B": "Qwen3.5-27B__both__id__rq4_full",
+    "Qwen3.5-35B-A3B": "Qwen3.5-35B-A3B__both__id__rq4_full"
+  },
+  "RQ3": {
+    "id": "Qwen3.5-35B-A3B__both__id__rq4_full",
+    "ood": "Qwen3.5-35B-A3B__both__ood__rq4_full"
+  },
+  "RQ4": {
+    "full": "Qwen3.5-35B-A3B__both__id__rq4_full",
+    "no_kinematics": "Qwen3.5-35B-A3B__both__id__rq4_no_kinematics",
+    "no_cot": "Qwen3.5-35B-A3B__both__id__rq4_no_cot",
+    "no_clearance": "Qwen3.5-35B-A3B__both__id__rq4_no_clearance",
+    "minimal": "Qwen3.5-35B-A3B__both__id__rq4_minimal"
+  }
+}

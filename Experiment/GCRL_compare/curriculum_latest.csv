@@ -1,0 +1,5 @@
+version,step,dist_frac,target_entropy,auto_mastered,auto_frontier,auto_bin_succ
+v1 startX·dist,2999892,0.900,-4.000,-,-,-
+v2 startO·dist,999041,1.000,-4.000,-,-,-
+v3 startX·auto,990536,-,-,0.600,0.300,0.719
+v4 startO·auto,990852,-,-,0.000,0.900,0.393

@@ -23,7 +23,7 @@ ttc_max: 1.5              # V3 우승값
 w_ttc: 0.2               # V3 우승값(스윗스팟)
 
 total_steps: 2000000
-seed: 0
+seed: 3
 eps: 0.2
 max_steps: 400
 frame_skip: 20

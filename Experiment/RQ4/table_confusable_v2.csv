@@ -1,0 +1,5 @@
+condition,success,safe_success,collision,stage1
+full,0.630,0.340,0.500,0.690
+drop2_kinematics,0.620,0.340,0.510,0.640
+drop4_safety,0.640,0.370,0.480,0.660
+drop8_examples,0.450,0.230,0.400,0.450

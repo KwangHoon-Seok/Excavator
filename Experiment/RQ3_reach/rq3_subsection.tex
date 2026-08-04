@@ -1,0 +1,70 @@
+\subsection{RQ3: Does the framework generalize to novel environments?}\label{subsec:rq3}
+
+We answer RQ3 with two complementary experiments that share the same frozen low-level
+controller (\texttt{v4base}). The \emph{reaching} experiment isolates the low-level GCRL policy
+and shows that it \emph{degrades} sharply on out-of-distribution (OOD) obstacle fields, while the
+\emph{loading-mission} experiment shows that the full VLM+GCRL framework \emph{operates and
+generalizes} to those environments.
+
+\paragraph{Setup.}
+For each experiment we sample $n{=}100$ scenes per distribution with a fixed held-out seed band.
+The goal (or mission targets) is held identical across ID and OOD for a paired comparison; only the
+obstacle field changes. \textbf{ID} matches the training distribution ($\leq 3$ obstacles,
+height $0.7$--$2.5$\,m); \textbf{OOD} lies outside it ($5$--$7$ obstacles, height $2.5$--$3.5$\,m walls,
+larger footprints). The VLM planner is Qwen3.5-27B reading an RGB cabin view and a Cartesian
+top-down height map. The primary metric is \emph{safe-success} (goal reached with zero collision).
+
+\paragraph{(a) The low-level controller degrades under OOD (reaching).}
+Table~\ref{tab:rq3-reach} reports the GCRL-only policy driven directly to a single reachable
+waypoint amid obstacles. Safe-success collapses from $0.49$ (ID) to $0.13$ (OOD) and the collision
+rate surges from $0.05$ to $0.45$: reactive low-level avoidance cannot clear the denser, taller
+OOD obstacle fields it never saw in training.
+
+\begin{table}[t]\centering
+\caption{Low-level GCRL alone (reaching, $n{=}100$/dist).}\label{tab:rq3-reach}
+\begin{tabular}{lrrr}
+\toprule
+dist & safe-success & collision & \#obs \\
+\midrule
+ID  & 0.49 & 0.05 & 2.6 \\
+OOD & 0.13 & 0.45 & 5.5 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{(b) The VLM+GCRL framework generalizes to OOD (loading mission).}
+Table~\ref{tab:rq3-mission} reports the full pile$\rightarrow$truck mission. Without high-level
+guidance, GCRL alone (A) cannot complete the obstacle-laden mission in either distribution
+($0.00$). With VLM sub-goals (B), the framework attains $0.42$ safe-success on ID and retains
+$0.33$ on OOD --- a retention of $0.33/0.42\approx0.79$ --- demonstrating that semantic perception
+plus sub-goal planning lets the framework carry over to novel environments.
+
+\begin{table}[t]\centering
+\caption{Full framework on the loading mission ($n{=}100$/dist).}\label{tab:rq3-mission}
+\begin{tabular}{lrrr}
+\toprule
+dist & GCRL-only (A) & VLM+GCRL (B) & B collision \\
+\midrule
+ID  & 0.00 & 0.42 & 0.01 \\
+OOD & 0.00 & 0.33 & 0.23 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]\centering
+\includegraphics[width=\linewidth]{Experiment/RQ3_reach/rq3_combined_figure.png}
+\caption{RQ3. (a) The low-level GCRL policy alone degrades on OOD obstacle fields (safe-success
+$0.49\!\rightarrow\!0.13$, collision $0.05\!\rightarrow\!0.45$). (b) The VLM+GCRL framework, which
+GCRL alone cannot perform ($0.00$), operates and generalizes to OOD ($0.42\!\rightarrow\!0.33$,
+retention $0.79$). Error bars: Wilson $95\%$ CI.}\label{fig:rq3}
+\end{figure}
+
+\paragraph{Discussion and limitations.}
+Together, (a) and (b) answer RQ3 affirmatively: the low-level policy alone breaks down in novel
+environments, whereas the VLM-guided framework generalizes. We note one honest limitation: at the
+reaching level, VLM guidance did not raise safe-success \emph{above} GCRL-only under the most
+severe OOD walls ($\Delta_{\text{safe}}\approx 0$). The excavator reaches a waypoint by
+\emph{swinging} its cabin, so the boom/stick/bucket sweep through an obstacle's azimuth sector;
+planning that only makes the bucket-tip's Cartesian path collision-free cannot remove these
+\emph{swing-sweep} collisions (indeed a purely geometric Cartesian validator increased collisions).
+Swing-aware (polar, azimuth-sector) planning is a natural next step.

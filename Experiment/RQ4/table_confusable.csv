@@ -1,0 +1,7 @@
+condition,success,safe_success,collision,stage1
+full,0.650,0.360,0.420,0.680
+no_kinematics,0.680,0.400,0.400,0.690
+no_clearance,0.620,0.390,0.390,0.650
+no_cot,0.690,0.400,0.430,0.710
+no_examples,0.570,0.280,0.430,0.580
+minimal,0.590,0.380,0.320,0.610

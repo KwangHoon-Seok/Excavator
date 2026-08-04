@@ -1,0 +1,27 @@
+# Qwen-VLM-guided GCRL 실험 의존성
+#
+# torch는 시스템 NVIDIA 드라이버(CUDA 12.2, driver 535.x)에 맞춘 cu124 빌드를 써야 한다.
+# 기본 PyPI 휠(cu13x)을 깔면 torch.cuda.is_available()==False가 되니 아래 index-url로 설치:
+#
+#   pip install torch==2.6.0 torchvision==0.21.0 --index-url https://download.pytorch.org/whl/cu124
+#   pip install -r Experiment/Code/requirements.txt
+#
+# (참고: stable-baselines3 2.9는 torch>=2.8 핀 경고를 내지만 2.6에서 정상 작동 — 무시 가능.)
+
+# ── VLM (로컬 Qwen2.5-VL) ──
+transformers>=4.49
+accelerate>=0.30
+qwen-vl-utils>=0.0.8
+pillow>=10.0
+
+# ── GCRL 제어기 + 시뮬 ──
+stable-baselines3>=2.9
+gymnasium>=1.0
+mujoco>=3.1
+numpy>=1.24
+pyyaml>=6.0
+matplotlib>=3.7          # gridmap.render_grid (극좌표 height map PNG)
+
+# torch는 위 index-url로 별도 설치(여기에 두면 cu13x 휠이 잡힘):
+# torch==2.6.0
+# torchvision==0.21.0

@@ -1,7 +1,97 @@
-Images/
-Evaluate/plots/
-Evaluate/__pycache__/
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+.venv/
+venv/
+env/
 
+# ============================================================
+# 에디터 / OS
+# ============================================================
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*~
+
+# ============================================================
+# 이미지 / 영상 (렌더링 결과, 논문 figure 등)
+# ============================================================
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.mp4
+*.avi
+*.svg
+*.pdf
+
+# ============================================================
+# 실험 데이터 / 대용량 배열
+# ============================================================
+*.npz
+*.npy
+*.pkl
+*.pickle
+*.h5
+*.hdf5
+*.parquet
+
+# ============================================================
+# 학습 산출물 (체크포인트 / 로그 / 캐시)
+# ============================================================
+*.pt
+*.pth
+*.ckpt
+*.zip
+*.log
+
+.cache/
+checkpoints/
+logs/
+runs/
+wandb/
+tb_logs/
+tensorboard/
+events.out.tfevents.*
+
+Model/checkpoints/
+Model/logs/
+Model/.cache/
+
+# ============================================================
+# 실험 결과 디렉토리 (raw output)
+# ============================================================
+Images/
+figures/
+out/
+outputs/
+
+Evaluate/plots/
+Evaluate/vlm_guided/out/
+Evaluate/vlm_guided/out_clean/
+Evaluate/vlm_guided/out_smooth/
+
+VLM/out/
+
+# Experiment: 대용량 raw dump (JSON 1.8만개 / rollout 등)
+Experiment/Code/out/
+Experiment/Code/rq3_reach/
+Experiment/**/gifs/
+Experiment/**/env_images/
+Experiment/**/cells*/
+Experiment/**/scenarios/
+Experiment/**/rollouts/
+Experiment/**/raw/
+
+# ============================================================
+# 외부 에셋 / 데이터셋
+# ============================================================
 excavator_dataset/
 
 Model/checkpoints
@@ -26,10 +116,3 @@ terrain.py
 view_excavator.py
 viz_reachable_waypoint.py
 viz_sampling_compare.py
-
-Evaluate/plots/
-Evaluate/vlm_guided/out/
-Evaluate/vlm_guided/out_clean/
-Evaluate/vlm_guided/out_smooth/
-
-figures/

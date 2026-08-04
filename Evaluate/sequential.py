@@ -20,7 +20,7 @@ import mujoco
 import mujoco.viewer  # 최상단 import (main 안에서 import 시 mujoco가 지역변수化 → UnboundLocalError)
 from stable_baselines3 import SAC
 
-ROOT = "/home/aimlab/qwen-vlm"
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "Model"))
 sys.path.insert(0, ROOT)
 from excavator_env import ExcavatorRHEREnv  # noqa: E402

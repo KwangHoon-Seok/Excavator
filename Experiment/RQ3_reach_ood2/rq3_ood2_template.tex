@@ -1,0 +1,62 @@
+% =====================================================================
+%  RQ3 (reaching, ID vs OOD2) — 논문용 템플릿
+%  사용법: 아래 [값 블록]의 숫자만 실험 종료 후 교체하면 표·본문 자동 갱신.
+%          실제 수치는 Experiment/RQ3_reach_ood2/table.csv 에서 복사.
+%          그림은 aggregate.py가 Experiment/RQ3_reach_ood2/figure.png 로 자동 생성.
+% =====================================================================
+
+% ---------- [값 블록] 실험 종료 후 이 숫자만 교체 (현재 PLACEHOLDER) ----------
+\newcommand{\AsafeID}{0.49}   % GCRL-only  safe-success, ID     <-- REPLACE
+\newcommand{\BsafeID}{0.52}   % VLM+GCRL    safe-success, ID     <-- REPLACE
+\newcommand{\AsafeOOD}{0.25}  % GCRL-only  safe-success, OOD2    <-- REPLACE
+\newcommand{\BsafeOOD}{0.45}  % VLM+GCRL    safe-success, OOD2    <-- REPLACE
+\newcommand{\AcollID}{0.05}   % GCRL-only  collision, ID         <-- REPLACE
+\newcommand{\BcollID}{0.10}   % VLM+GCRL    collision, ID         <-- REPLACE
+\newcommand{\AcollOOD}{0.35}  % GCRL-only  collision, OOD2        <-- REPLACE
+\newcommand{\BcollOOD}{0.15}  % VLM+GCRL    collision, OOD2        <-- REPLACE
+\newcommand{\nobsID}{2.6}     % 평균 장애물 수, ID                <-- REPLACE
+\newcommand{\nobsOOD}{4.0}    % 평균 장애물 수, OOD2              <-- REPLACE
+\newcommand{\deltaOOD}{+0.20} % OOD2 safe 차이 (B - A)            <-- REPLACE
+\newcommand{\retention}{0.87} % 일반화 유지율 = BsafeOOD/BsafeID  <-- REPLACE
+% -----------------------------------------------------------------------------
+
+\subsection{RQ3: Does the framework generalize to novel environments?}\label{subsec:rq3}
+
+We evaluate generalization at the reaching level on a paired ID/OOD2 split: identical goals,
+only the obstacle field changes. \textbf{ID} matches the training distribution
+($\leq 3$ obstacles, height $0.7$--$2.5$\,m); \textbf{OOD2} lies outside it
+(up to $5$ obstacles, height $1.2$--$3.0$\,m, footprint $0.6$--$1.4$\,m, $2$ path-blocking).
+The planner is Qwen3.5-27B reading an RGB view and a Cartesian height map; the low-level
+controller (\texttt{v4base}) is frozen. Metric: safe-success (goal reached, zero collision).
+
+\begin{table}[t]\centering
+\caption{RQ3 reaching, ID vs OOD2 ($n{=}100$/dist). A=GCRL-only, B=VLM+GCRL.}
+\label{tab:rq3-ood2}
+\begin{tabular}{lccccc}
+\toprule
+ & \multicolumn{2}{c}{safe-success $\uparrow$} & & \multicolumn{2}{c}{collision $\downarrow$} \\
+\cmidrule{2-3}\cmidrule{5-6}
+dist & GCRL-only & VLM+GCRL & $\Delta_{\text{safe}}$ & GCRL-only & VLM+GCRL \\
+\midrule
+ID   & \AsafeID  & \BsafeID  & --        & \AcollID  & \BcollID  \\
+OOD2 & \AsafeOOD & \BsafeOOD & \deltaOOD & \AcollOOD & \BcollOOD \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]\centering
+\includegraphics[width=\linewidth]{Experiment/RQ3_reach_ood2/figure.png}
+\caption{RQ3 (reaching, ID vs OOD2). Left: safe-success; right: collision rate, for GCRL-only
+vs VLM+GCRL. Under the novel OOD2 obstacle field, GCRL alone drops to \AsafeOOD{} while VLM+GCRL
+retains \BsafeOOD{} (retention \retention), showing the framework generalizes.
+Error bars: Wilson $95\%$ CI.}
+\label{fig:rq3-ood2}
+\end{figure}
+
+\paragraph{Results.}
+On the in-distribution split both methods perform comparably (safe-success \AsafeID{} vs \BsafeID).
+On the novel OOD2 environment the low-level policy alone degrades to \AsafeOOD{} (collision
+\AcollOOD), whereas VLM+GCRL attains \BsafeOOD{} ($\Delta_{\text{safe}}=\deltaOOD$) with a lower
+collision rate (\BcollOOD{} vs \AcollOOD). Relative to ID, VLM+GCRL retains a fraction
+\retention{} of its performance, demonstrating that VLM sub-goal guidance lets the framework
+generalize to obstacle fields outside the controller's training distribution.

@@ -1,0 +1,5 @@
+version,step,fulltask_success,safe_success,collision_rate,mean_dist
+v1 startX·dist,3000000,0.660,0.600,0.060,1.397
+v2 startO·dist,1000000,0.440,0.280,0.280,2.931
+v3 startX·auto,1000000,0.600,0.440,0.180,1.764
+v4 startO·auto,1000000,0.380,0.280,0.160,3.044

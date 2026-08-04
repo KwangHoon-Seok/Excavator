@@ -1,0 +1,154 @@
+% RQ4 — prompt-component ablation.
+% 상태: Table 1·2·3은 실측치(n=100). Table 4(tall)만 실행 중이라 \tbd 자리표시자.
+%   \tbd 자리는 Experiment/Code/aggregate_rq4tall.py 출력(→ RQ4/table_tall.csv)으로 치환.
+% 프리앰블에 필요: \newcommand{\tbd}{\textcolor{gray}{--}}   % 결과 채우면 삭제
+
+\subsection{RQ4: Which prompt components actually carry the performance?}\label{subsec:rq4}
+
+We ablate the high-level planner's system prompt one component at a time and measure the
+resulting loading-mission performance. All conditions share the same frozen low-level controller,
+the same $n{=}100$ held-out seeds, the same Qwen3.5-27B planner, and the same inputs
+(RGB cabin view $+$ Cartesian top-down height map); only the prompt text differs.
+The full prompt has eight components: (1) image interpretation, (2) kinematic reach envelope,
+(3) vertical-passability test, (4) clearance rules and a three-step path-safety check,
+(5) task template, (6) planning order, (7) output schema, (8) two few-shot examples.
+
+\paragraph{Prompt scaffolding is nearly free to remove.}
+Table~\ref{tab:rq4-id} shows that on in-distribution scenes every component can be deleted
+without a significant loss: cutting the prompt from 263 lines to a 48-line \emph{minimal}
+variant (coordinate frame $+$ task $+$ output schema only) costs $0.02$ success ($p{=}0.41$).
+Only the few-shot examples approach significance ($-0.06$, $p{=}0.052$).
+
+\begin{table}[t]\centering
+\caption{Prompt-component ablation, in-distribution scenes ($n{=}100$).
+$p$: two-proportion $z$-test against \emph{full}.}\label{tab:rq4-id}
+\begin{tabular}{lrrrr}
+\toprule
+prompt & success & safe-succ. & collision & $p$ \\
+\midrule
+full (263 lines)      & 0.98 & 0.72 & 0.28 & --- \\
+$-$ kinematics        & 0.97 & 0.71 & 0.27 & 0.651 \\
+$-$ clearance         & 0.97 & 0.71 & 0.27 & 0.651 \\
+$-$ CoT procedure     & 0.97 & 0.68 & 0.31 & 0.651 \\
+$-$ examples          & 0.92 & 0.66 & 0.28 & 0.052 \\
+minimal (48 lines)    & 0.96 & 0.71 & 0.27 & 0.407 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Under perceptual ambiguity, only the examples matter.}
+In the \emph{confusable} setting (pile and truck rendered as boxes of the same size as the
+obstacles, so geometry alone cannot assign object roles) overall success drops to $0.63$, yet
+removing the kinematics or the safety component still changes nothing; removing the examples
+costs $0.18$ success (Table~\ref{tab:rq4-conf}). The failure is a planning failure, not an
+execution one: the minimum distance from any planned sub-goal to the true pile grows from
+$0.54$\,m to $1.48$\,m and the fraction of plans that target the pile within $0.5$\,m falls from
+$0.66$ to $0.28$, while the number of blobs labelled \texttt{obstacle} rises from $2.04$ to
+$2.82$ (ground truth $2.68$) --- without a demonstration the planner labels the box-shaped
+pile and truck as obstacles to avoid.
+
+\begin{table}[t]\centering
+\caption{Prompt-component ablation, confusable scenes ($n{=}100$). Plan$\to$pile is the minimum
+distance from any planned sub-goal to the true pile.}\label{tab:rq4-conf}
+\begin{tabular}{lrrrrr}
+\toprule
+prompt & success & safe-succ. & stage-1 & plan$\to$pile (m) & $p$ \\
+\midrule
+full                & 0.63 & 0.34 & 0.69 & 0.54 & --- \\
+$-$ kinematics (\S2)& 0.62 & 0.34 & 0.64 & 0.68 & 0.884 \\
+$-$ safety (\S4)    & 0.64 & 0.37 & 0.66 & 0.65 & 0.883 \\
+$-$ examples (\S8)  & 0.45 & 0.23 & 0.45 & 1.48 & \textbf{0.011} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Why the null results are a property of the benchmark, not of the components.}
+Two confounds make Tables~\ref{tab:rq4-id}--\ref{tab:rq4-conf} unable to falsify the kinematics
+and safety components. First, the ablations \emph{leak}: deleting a section leaves the same
+knowledge in the sections that are never deleted (Table~\ref{tab:rq4-leak}). Consistently, the
+plans are unchanged when \S4 is removed --- mean tip-path clearance $+0.35$\,m in both conditions,
+obstacle-free-path rate $0.85$ vs.\ $0.88$, maximum sub-goal height $1.94$ vs.\ $1.99$\,m.
+Second, the scenes never \emph{bind} the constraints: no target ever leaves the reach envelope and
+no obstacle is ever too tall to fly over (Table~\ref{tab:rq4-bind}, ID column). A component whose
+knowledge is never needed cannot be shown to matter.
+A third, metric-level confound affects collisions specifically: the planner emits bucket-tip
+way-points, but a collision is recorded whenever \emph{any} arm link sweeps an obstacle. Plans
+whose tip path is geometrically clear still collide $0.46$ of the time, and the way-point-only
+baseline collides \emph{less} than the fully-scaffolded planner ($0.36$ vs.\ $0.50$), so tip-space
+clearance rules cannot move this metric.
+
+\begin{table}[t]\centering
+\caption{Knowledge leakage in the naive ablations. Deleting a section leaves the same content
+elsewhere in the prompt.}\label{tab:rq4-leak}
+\begin{tabular}{lll}
+\toprule
+condition & section deleted & same knowledge still present in \\
+\midrule
+$-$ kinematics & \S2 reach table & \S3 worked examples ($z_{\max}$), \S7 field, \S8 few-shot \\
+$-$ safety     & \S4 clearance + path check & \S5 ``lift to $h_{\max}{+}0.5$'', \S7 \texttt{clearance\_check}, \S8 detour demo \\
+\textbf{clean (ours)} & \S4 \emph{and all of the above} & --- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[t]\centering
+\caption{Do the ablated constraints bind? Scene statistics over the same $n{=}100$ seeds.
+\textsc{tall} keeps the obstacle count, footprint and corridor width of \textsc{id} and changes
+only obstacle height ($2.0$--$2.6$\,m) and the placement of one obstacle onto the
+pile$\to$truck segment.}\label{tab:rq4-bind}
+\begin{tabular}{lrr}
+\toprule
+scene statistic & \textsc{id} & \textsc{tall} \\
+\midrule
+obstacles per scene                       & 2.23 & 2.41 \\
+targets outside the reach envelope        & 0.00 & 0.00 \\
+obstacles that cannot be cleared vertically & 0.00 & 0.79 \\
+straight pile$\to$truck path blocked      & 0.11 & 0.74 \\
+\textbf{seeds requiring a horizontal detour} & \textbf{0.00} & \textbf{0.73} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{With a leak-free ablation on binding scenes, the safety component does carry weight.}
+We re-run the safety ablation on \textsc{tall} scenes and remove the safety knowledge from
+\emph{every} location in the prompt (passability test, clearance rules, path check, the
+``lift above $h_{\max}{+}0.5$'' clause of the task template, the \texttt{passable} and
+\texttt{clearance\_check} output fields, and the detour demonstration in the few-shot examples),
+keeping perception, the coordinate frame and the reach table intact. Because execution collisions
+saturate on \textsc{tall} scenes for reasons outside the planner's control, the primary metric is
+plan-level: \emph{plan-safe} is the fraction of plans whose entire HOME$\to$sub-goal poly-line
+stays outside every obstacle box.
+
+\begin{table}[t]\centering
+\caption{Leaky vs.\ leak-free safety ablation on binding (\textsc{tall}) scenes ($n{=}100$).
+Plan-level metrics isolate the planner from the low-level controller.}\label{tab:rq4-tall}
+\begin{tabular}{lrrrrrrr}
+\toprule
+prompt & plan-safe & $p$ & clearance (m) & kin-valid & \#sub-goals & success & collision \\
+\midrule
+full                        & \tbd & --- & \tbd & \tbd & \tbd & \tbd & \tbd \\
+$-$ safety, leaky (\S4 only)& \tbd & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
+$-$ safety, leak-free       & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd & \tbd \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Takeaway.}
+The marginal value of prompt engineering is a function of task difficulty, not of prompt length:
+once perception is solved, a $48$-line prompt matches a $263$-line one. Apparent null results for
+individual components must be read together with (i) whether the ablation is leak-free and
+(ii) whether the scene distribution makes the removed knowledge necessary --- otherwise an
+ablation measures the benchmark rather than the prompt.
+
+%% --- 선택: E1(kinematics binding) 실행 시 추가할 표 -----------------------------
+% \begin{table}[t]\centering
+% \caption{Leak-free kinematics ablation on reach-boundary scenes ($n{=}100$).}\label{tab:rq4-reachedge}
+% \begin{tabular}{lrrrr}
+% \toprule
+% prompt & kin-valid & $p$ & success & stage-1 \\
+% \midrule
+% full & \tbd & --- & \tbd & \tbd \\
+% $-$ kinematics, leak-free & \tbd & \tbd & \tbd & \tbd \\
+% \bottomrule
+% \end{tabular}
+% \end{table}

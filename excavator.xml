@@ -1,5 +1,5 @@
 <mujoco model="onshape">
-  <compiler angle="radian"/>
+  <compiler angle="radian" meshdir="excavatorURDF"/>
 
   <!-- CAT 313 (~13t) 기준 제원 매칭 / Vortex 21t는 참고 -->
   <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast"/>
@@ -29,20 +29,20 @@
     <texture name="sky" type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="512"/>
     <texture name="grid" type="2d" builtin="checker" rgb1="0.42 0.37 0.30" rgb2="0.52 0.47 0.40" width="512" height="512"/>
     <material name="grid_mat" texture="grid" texrepeat="20 20" reflectance="0.05"/>
-    <mesh name="compact_excavator_cabin_body" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/compact_excavator_cabin_body.stl"/>
-    <mesh name="compact_excavator_turret_cabin_roller" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/compact_excavator_turret_cabin_roller.stl"/>
-    <mesh name="compact_excavator_frame_body" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/compact_excavator_frame_body.stl"/>
-    <mesh name="compact_excavator_main_drive_wheel" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/compact_excavator_main_drive_wheel.stl"/>
-    <mesh name="compact_excavator_front_wheel" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/compact_excavator_front_wheel.stl"/>
-    <mesh name="push_blade_bucket" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/push_blade_bucket.stl"/>
-    <mesh name="track_roller_wheel_1" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/track_roller_wheel_1.stl"/>
-    <mesh name="carrier_roller" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/carrier_roller.stl"/>
-    <mesh name="part01_pin_1" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/part01_pin_1.stl"/>
-    <mesh name="part02" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/part02.stl"/>
-    <mesh name="part03" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/part03.stl"/>
-    <mesh name="part04" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/part04.stl"/>
-    <mesh name="bucket" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/bucket.stl"/>
-    <mesh name="bucket_mount" content_type="model/stl" file="/home/aimlab/qwen-vlm/excavatorURDF/bucket_mount.stl"/>
+    <mesh name="compact_excavator_cabin_body" content_type="model/stl" file="compact_excavator_cabin_body.stl"/>
+    <mesh name="compact_excavator_turret_cabin_roller" content_type="model/stl" file="compact_excavator_turret_cabin_roller.stl"/>
+    <mesh name="compact_excavator_frame_body" content_type="model/stl" file="compact_excavator_frame_body.stl"/>
+    <mesh name="compact_excavator_main_drive_wheel" content_type="model/stl" file="compact_excavator_main_drive_wheel.stl"/>
+    <mesh name="compact_excavator_front_wheel" content_type="model/stl" file="compact_excavator_front_wheel.stl"/>
+    <mesh name="push_blade_bucket" content_type="model/stl" file="push_blade_bucket.stl"/>
+    <mesh name="track_roller_wheel_1" content_type="model/stl" file="track_roller_wheel_1.stl"/>
+    <mesh name="carrier_roller" content_type="model/stl" file="carrier_roller.stl"/>
+    <mesh name="part01_pin_1" content_type="model/stl" file="part01_pin_1.stl"/>
+    <mesh name="part02" content_type="model/stl" file="part02.stl"/>
+    <mesh name="part03" content_type="model/stl" file="part03.stl"/>
+    <mesh name="part04" content_type="model/stl" file="part04.stl"/>
+    <mesh name="bucket" content_type="model/stl" file="bucket.stl"/>
+    <mesh name="bucket_mount" content_type="model/stl" file="bucket_mount.stl"/>
   </asset>
 
   <worldbody>

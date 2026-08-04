@@ -1,0 +1,24 @@
+\begin{table}[t]
+\centering
+\caption{Long-horizon reach without obstacles: single GCRL (A) vs.\ VLM-hops+GCRL (B). Success rate binned by goal distance from HOME. Single GCRL collapses beyond $\sim$3.6\,m (its curriculum horizon); VLM sub-goal decomposition restores reach.}
+\label{tab:rq2_longhorizon}
+\begin{tabular}{lccccc}
+\toprule
+Dist.\ (m) & $n$ & A (GCRL) & B (VLM+GCRL) & $\Delta$ & hops \\
+\midrule
+0.8 & 9 & 1.00 & 1.00 & +0.00 & 1.8 \\
+1.6 & 15 & 0.93 & 0.93 & +0.00 & 2.1 \\
+2.4 & 10 & 0.80 & 0.80 & +0.00 & 2.6 \\
+3.2 & 16 & 0.44 & 0.75 & +0.31 & 3.1 \\
+4.0 & 22 & 0.05 & 0.73 & +0.68 & 3.5 \\
+4.8 & 19 & 0.00 & 0.63 & +0.63 & 3.8 \\
+5.6 & 15 & 0.00 & 0.47 & +0.47 & 3.8 \\
+6.4 & 11 & 0.00 & 0.55 & +0.55 & 4.1 \\
+7.2 & 3 & 0.00 & 0.33 & +0.33 & 4.0 \\
+\midrule
+ID ($<$3.6m) & 50 & 0.76 & 0.86 & +0.10 & -- \\
+OOD ($\geq$3.6m) & 70 & 0.01 & 0.60 & +0.59 & -- \\
+\textbf{Overall} & 120 & \textbf{0.33} & \textbf{0.71} & +0.38 & -- \\
+\bottomrule
+\end{tabular}
+\end{table}

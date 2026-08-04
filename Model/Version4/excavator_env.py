@@ -14,7 +14,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import mujoco
 
-ROOT = "/home/aimlab/qwen-vlm"
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 import reward as R  # Model/reward.py  # noqa: E402
@@ -29,7 +29,7 @@ class ExcavatorRHEREnv(gym.Env):
 
     def __init__(self, frame_skip=20, max_steps=300, eps=0.3, reward="sparse",
                  random_start=False, normalize_goal=True, goal_azimuth_limit_deg=None,
-                 obstacle_training=False, n_obstacles=3,
+                 obstacle_training=False, n_obstacles=3, n_obs_geom=4,
                  obs_len_range=(0.3, 0.9), obs_wid_range=(0.3, 0.9), obs_hgt_range=(0.3, 0.9),
                  obs_start_margin=0.30, obs_goal_margin=0.40,
                  obs_path_relevant=1, obs_path_corridor=0.6, obs_place_tries=20, obs_path_tmax=0.75,
@@ -67,9 +67,11 @@ class ExcavatorRHEREnv(gym.Env):
         self.w_stuck = w_stuck             # 정지 페널티 가중(0=끔)
         self.stuck_motion_thr = stuck_motion_thr   # 스텝당 qpos 변화 norm 임계(미만=정지)
         self.stuck_gate_eps = stuck_gate_eps       # goal 근처(eps의 배수) 이내면 정지 허용(게이팅)
-        self._n_obs_geom = 4               # 주입할 장애물 geom 수(활성 ≤ 이 값)
+        self._n_obs_geom = n_obs_geom      # 주입할 장애물 geom 수(활성 ≤ 이 값). 기본 4(훈련). OOD 평가는 상향(예:8)
         if obstacle_training:              # 장애물 box 주입(contype=4=물리 무시, mj_geomDistance만). 크기는 reset마다 랜덤
             xml = open(XML).read()
+            # from_xml_string은 상대 meshdir을 CWD 기준으로 찾으므로, 실행 위치와 무관하도록 절대경로로 치환
+            xml = xml.replace('meshdir="excavatorURDF"', 'meshdir="%s"' % os.path.join(ROOT, "excavatorURDF"))
             inj = ''.join('<body name="obs%d" pos="0 0 %d"><geom name="obs%d_g" type="box" '
                           'size="0.3 0.3 0.3" rgba="0.65 0.4 0.4 0.75" contype="4" conaffinity="0"/></body>'
                           % (i, 50 + i, i) for i in range(self._n_obs_geom))
