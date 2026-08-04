@@ -370,6 +370,40 @@ class CurriculumCallback(BaseCallback):
         return True
 
 
+class TargetEntropyBoostCallback(BaseCallback):
+    """커리큘럼과 독립적인 target-entropy boosting(#3 ablation용).
+    커리큘럼 진급 이벤트 없이, 학습 시작부터 CurriculumCallback과 동일한 감쇠식을 적용:
+      target_entropy = base + boost · min(0.5^(t/halflife), (up−success)/up)
+    - time_decay = 0.5^(t/halflife): 시간 상한(무조건 감소, explore-forever 방지)
+    - success_g  = (up−success)/up : 성공률↑이면 빨리 exploit
+    boost=0이면 아무 것도 안 함(=순수 GCRL)."""
+    def __init__(self, metrics_cb, boost=4.0, halflife=20000, up=0.65, verbose=0):
+        super().__init__(verbose)
+        self.metrics_cb = metrics_cb
+        self.boost = float(boost); self.halflife = float(halflife); self.up = float(up)
+        self._base_te = None; self._te = None; self._last_checked = -1
+
+    def _on_training_start(self) -> None:
+        self._base_te = float(self.model.target_entropy); self._te = self._base_te
+        if self.verbose:
+            print(f"[te-boost] standalone target_entropy boost={self.boost} "
+                  f"(base={self._base_te}, halflife={self.halflife})")
+
+    def _on_step(self) -> bool:
+        if self._te is not None:
+            self.logger.record("curriculum/target_entropy", float(self._te))
+        rec = self.metrics_cb.records
+        if rec and rec[-1][0] != self._last_checked:      # 새 eval 기록 시에만 갱신
+            self._last_checked = rec[-1][0]
+            success = rec[-1][1]
+            time_decay = 0.5 ** (self.num_timesteps / self.halflife)
+            success_g = float(np.clip((self.up - success) / self.up, 0.0, 1.0))
+            bf = min(time_decay, success_g)
+            self._te = self._base_te + self.boost * bf
+            self.model.target_entropy = self._te
+        return True
+
+
 class AutoCurriculumCallback(BaseCallback):
     """자동 커리큘럼 모니터링 — 학습 env의 bin 성공률 통계를 TB에 기록.
     실제 샘플링·bin 갱신은 env가 자체 수행(set_auto(True) + step에서 EMA). 여기선 관찰만."""

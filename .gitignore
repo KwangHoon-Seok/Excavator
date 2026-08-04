@@ -3,9 +3,16 @@ Evaluate/plots/
 Evaluate/__pycache__/
 
 excavator_dataset/
-excavatorURDF/
 
-Model/checkpoints/
+Model/checkpoints
+Model/checkpoints/Version2
+Model/checkpoints/Version3
+Model/checkpoints/Version6
+Model/checkpoints/Version7
+Model/checkpoints/Version8
+Model/Version4/
+
+
 Model/logs/
 Model/__pycache__/
 
